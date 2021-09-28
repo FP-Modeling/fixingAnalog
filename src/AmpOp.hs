@@ -12,8 +12,8 @@ type Output = Signal Float
 type Resistor = Signal Float
 type OpenLoopGain = Signal Float
 
-vIn :: Signal Float
-vIn = Signal $ const 12
+dc12 :: Signal Float
+dc12 = Signal $ const 12
 
 outlet :: Signal Float
 outlet = Signal $ \time -> 220 * sqrt 2 * (sin 2*pi*60*time)
@@ -28,7 +28,6 @@ data AmpOp = AmpOp { name :: String,
 
 instance Show AmpOp where
     show ap = Prelude.show "AmpOp => Name: " ++ Prelude.show (name ap)
-
 
 lm741 :: AmpOp
 lm741 = AmpOp "LM741" 200000 "Texas. Instruments"
@@ -54,19 +53,17 @@ makeAmpOpModel = AmpOp
 -- ampOp :: Input -> Input -> AmpOp -> Output
 -- ampOp (Circuit vPlus) (Circuit vMinus) model = return $ openLoopGain model * (vPlus  - vMinus)
 
-ampOpBuffer :: Time -> Input -> AmpOp -> Output
-ampOpBuffer time input model = vOut
-    where vOut = (result `simulate` input) `at` time
-          result = ($ ground)
+ampOpBuffer :: AmpOp -> (Input -> Time -> Output)
+ampOpBuffer model input time = (circuit `simulate` input) `at` time
+    where circuit = ($ ground)
                    <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time vOut -> if (openLoopGain model  * vIn) / (1 + openLoopGain model) - vOut <= 0.0001 then
                         vOut else
                         f (openLoopGain model  * vIn / (1 + openLoopGain model)))
 
 
-ampOpNonInverting :: Time -> Input -> AmpOp -> Resistor -> Resistor -> Output
-ampOpNonInverting time input model r1 r2 = vOut
-    where (_, vOut) = (result `simulate` input) `at` time
-          result = ($ (ground, ground))
+ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> (Input -> Time -> Output)
+ampOpNonInverting model r1 r2 input time= snd $ (circuit `simulate` input) `at` time
+    where circuit = ($ (ground, ground))
                     <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time (vX, vOut) -> if (((openLoopGain model * vIn) - vOut) / openLoopGain model) - vX <= 0.001 && ((vX * (r1 + r2)) / r1) - vOut <= 0.01 then
                         (vX, vOut) else
                         f (((openLoopGain model * vIn) - vOut) / openLoopGain model, (vX * (r1 + r2)) / r1))
@@ -76,10 +73,9 @@ ampOpNonInverting time input model r1 r2 = vOut
 --                                         vOut <- ampOp vIn (Circuit vX) model
 --                                         return vOut                               
 
-ampOpInverting :: Time -> Input -> AmpOp -> Resistor -> Resistor -> Output
-ampOpInverting time input model r1 r2 = vOut
-    where (_, vOut) = (result `simulate` input) `at` time
-          result = ($ (ground, ground))
+ampOpInverting :: AmpOp -> Resistor -> Resistor -> (Input -> Time -> Output)
+ampOpInverting model r1 r2 input time = snd $ (circuit `simulate` input) `at` time
+    where circuit = ($ (ground, ground))
                     <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time (vX, vOut) -> if vX - (- vOut) / openLoopGain model <= 0.001 && vOut - ((vX * (r1 + r2)) - vIn * r2) / r1 <= 0.01 then
                         (vX, vOut) else
                         f ((- vOut) / openLoopGain model, (vX * (r1 + r2) - vIn * r2) / r1))

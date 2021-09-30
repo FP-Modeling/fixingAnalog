@@ -14,7 +14,7 @@ instance Applicative Signal where
 
 instance Monad Signal where
     return = pure
-    ta >>= f = Signal $ \time -> f (ta `at` time) `at` time
+    sa >>= f = Signal $ \time -> f (sa `at` time) `at` time
 
 instance MonadFix Signal where
     mfix f = Signal $ \time -> fix ((`at` time) . f)

@@ -17,7 +17,7 @@ instance Applicative (Circuit a) where
 
 instance Monad (Circuit a) where
     return = pure
-    (Circuit mc) >>= f = Circuit $ \signal -> (`simulate` signal) . f =<< mc signal
+    (Circuit c) >>= f = Circuit $ \signal -> (`simulate` signal) . f =<< c signal
 
 instance MonadFix (Circuit a) where
      mfix f = Circuit $ \signal -> mfix ((`simulate` signal) . f)

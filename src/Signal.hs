@@ -2,7 +2,7 @@ module Signal where
 
 import Control.Monad.Fix
 
-type Time = Float
+type Time = Double
 newtype Signal a = Signal {at :: Time -> a}
 
 instance Functor Signal where

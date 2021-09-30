@@ -7,22 +7,22 @@ import Control.Monad.Fix
 import Signal
 import Circuit
 
-type Input = Signal Float
-type Output = Signal Float
-type Resistor = Signal Float
-type OpenLoopGain = Signal Float
+type Input = Signal Double
+type Output = Signal Double
+type Resistor = Signal Double
+type OpenLoopGain = Signal Double
 
-dc12 :: Signal Float
+dc12 :: Signal Double
 dc12 = Signal $ const 12
 
-outlet :: Signal Float
+outlet :: Signal Double
 outlet = Signal $ \time -> 220 * sqrt 2 * (sin 2*pi*60*time)
 
-ground :: Signal Float
+ground :: Signal Double
 ground = Signal $ const 0
 
 data AmpOp = AmpOp { name :: String,
-                    openLoopGain :: Signal Float,
+                    openLoopGain :: Signal Double,
                     manufacturer :: String
                 }
 
@@ -32,13 +32,13 @@ instance Show AmpOp where
 lm741 :: AmpOp
 lm741 = AmpOp "LM741" 200000 "Texas. Instruments"
 
-makeOpenLoopGain :: Float -> OpenLoopGain
+makeOpenLoopGain :: Double -> OpenLoopGain
 makeOpenLoopGain = pure
 
 a0 :: OpenLoopGain
 a0 = Signal $ const 100
 
-makeResistor :: Float -> Resistor
+makeResistor :: Double -> Resistor
 makeResistor = pure
 
 r1 :: Resistor
@@ -59,6 +59,17 @@ ampOpBuffer model input time = (circuit `simulate` input) `at` time
                    <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time vOut -> if (openLoopGain model  * vIn) / (1 + openLoopGain model) - vOut <= 0.0001 then
                         vOut else
                         f (openLoopGain model  * vIn / (1 + openLoopGain model)))
+
+--ampBuffer :: AmpOp -> Circuit Double Double
+ampBuffer model =
+  ($ ground) <$>  mfix
+  (\f -> Circuit $ \vIn -> Signal $ \t vOutOld ->
+    let vOut = (openLoopGain model * vIn) / (1 + openLoopGain model)
+        eps = 1e-3
+    in if vOut - vOutOld <= eps
+       then vOut
+       else f (vOut))
+    
 
 
 ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> (Input -> Time -> Output)

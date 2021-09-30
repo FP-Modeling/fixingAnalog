@@ -6,7 +6,7 @@ import Signal
 
 type Source = Signal Input
 
-executeSimulation :: Circuit Input Output -> Source -> [Time] -> [Output]
+executeSimulation :: Circuit Input Output -> Source -> [Time] -> [(Time, Output)]
 executeSimulation circuit input samples = do time <- samples
                                              let result = (circuit `simulate` input) `at` time
-                                             return result                                           
+                                             return (time, result)                                           

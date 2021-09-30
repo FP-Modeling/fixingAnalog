@@ -8,18 +8,18 @@ import Control.Monad.Fix
 import Signal
 import Circuit
 
-type In = Double
-type Out = Double
+type Input = Double
+type Output = Double
 type Resistor = Double
 type OpenLoopGain = Double
 
-dc12 :: Signal In
+dc12 :: Signal Input
 dc12 = Signal $ const 12
 
-outlet :: Signal In
+outlet :: Signal Input
 outlet = Signal $ \time -> 220 * sqrt 2 * (sin 2*pi*60*time)
 
-ground :: Signal In
+ground :: Signal Input
 ground = Signal $ const 0
 
 data AmpOp = AmpOp { name :: String,
@@ -44,7 +44,7 @@ eps = 0.0001
 makeAmpOpModel :: String -> OpenLoopGain -> String -> AmpOp
 makeAmpOpModel = AmpOp
 
-ampOpBuffer :: AmpOp -> Circuit In Out
+ampOpBuffer :: AmpOp -> Circuit Input Output
 ampOpBuffer model =
     ($ ground) <$> mfix
     (\f -> Circuit $ \vIn -> Signal $ \time vOutOld ->
@@ -53,7 +53,7 @@ ampOpBuffer model =
             then vOut `at` time
             else f vOut)
 
-ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> Circuit In Out
+ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> Circuit Input Output
 ampOpNonInverting model r1 r2 =
     ($ (ground, ground)) <$> mfix
     (\f -> Circuit $ \vIn -> Signal $ \time (vXOld, vOutOld) ->
@@ -63,7 +63,7 @@ ampOpNonInverting model r1 r2 =
             then vOut `at` time
             else f (vX, vOut))
 
-ampOpInverting :: AmpOp -> Resistor -> Resistor -> Circuit In Out
+ampOpInverting :: AmpOp -> Resistor -> Resistor -> Circuit Input Output
 ampOpInverting model r1 r2 =
     ($ (ground, ground)) <$> mfix
     (\f -> Circuit $ \vIn -> Signal $ \time (vXOld, vOutOld) ->

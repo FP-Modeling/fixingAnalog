@@ -1,5 +1,6 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BlockArguments #-}
 module AmpOp where
 
 import Control.Monad.Fix
@@ -7,10 +8,10 @@ import Control.Monad.Fix
 import Signal
 import Circuit
 
-type Input = Signal Double
-type Output = Signal Double
-type Resistor = Signal Double
-type OpenLoopGain = Signal Double
+type Input = Double
+type Output = Double
+type Resistor = Double
+type OpenLoopGain = Double
 
 dc12 :: Signal Double
 dc12 = Signal $ const 12
@@ -22,7 +23,7 @@ ground :: Signal Double
 ground = Signal $ const 0
 
 data AmpOp = AmpOp { name :: String,
-                    openLoopGain :: Signal Double,
+                    openLoopGain :: Double,
                     manufacturer :: String
                 }
 
@@ -32,77 +33,42 @@ instance Show AmpOp where
 lm741 :: AmpOp
 lm741 = AmpOp "LM741" 200000 "Texas. Instruments"
 
-makeOpenLoopGain :: Double -> OpenLoopGain
-makeOpenLoopGain = pure
-
-a0 :: OpenLoopGain
-a0 = Signal $ const 100
-
-makeResistor :: Double -> Resistor
-makeResistor = pure
-
 r1 :: Resistor
-r1 = Signal $ const 10000
+r1 = 10000
 
 r2 :: Resistor
-r2 = Signal $ const 50000
+r2 = 50000
+
+eps = 0.0001
 
 makeAmpOpModel :: String -> OpenLoopGain -> String -> AmpOp
 makeAmpOpModel = AmpOp
 
--- ampOp :: Input -> Input -> AmpOp -> Output
--- ampOp (Circuit vPlus) (Circuit vMinus) model = return $ openLoopGain model * (vPlus  - vMinus)
+ampOpBuffer :: AmpOp -> Circuit Input Output
+ampOpBuffer model =
+    ($ ground) <$> mfix
+    (\f -> Circuit $ \vIn -> Signal $ \t vOutOld ->
+        let vOut = (/ (1 + openLoopGain model)) <$> (( * openLoopGain model) <$> vIn)
+        in if vOut - vOutOld <= eps
+            then vOut `at` t
+            else f vOut)
 
-ampOpBuffer :: AmpOp -> (Input -> Time -> Output)
-ampOpBuffer model input time = (circuit `simulate` input) `at` time
-    where circuit = ($ ground)
-                   <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time vOut -> if (openLoopGain model  * vIn) / (1 + openLoopGain model) - vOut <= 0.0001 then
-                        vOut else
-                        f (openLoopGain model  * vIn / (1 + openLoopGain model)))
+ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> Circuit Input Output
+ampOpNonInverting model r1 r2 =
+    ($ (ground, ground)) <$> mfix
+    (\f -> Circuit $ \vIn -> Signal $ \t (vXOld, vOutOld) ->
+        let vX = (/ openLoopGain model) <$> (((* openLoopGain model) <$> vIn) - vOutOld)
+            vOut = (/ r1) <$> ((* (r1 + r2)) <$> vXOld)
+        in if vOut - vOutOld <= eps && vX - vXOld <= eps
+            then vOut `at` t
+            else f (vX, vOut))
 
---ampBuffer :: AmpOp -> Circuit Double Double
-ampBuffer model =
-  ($ ground) <$>  mfix
-  (\f -> Circuit $ \vIn -> Signal $ \t vOutOld ->
-    let vOut = (openLoopGain model * vIn) / (1 + openLoopGain model)
-        eps = 1e-3
-    in if vOut - vOutOld <= eps
-       then vOut
-       else f (vOut))
-    
-
-
-ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> (Input -> Time -> Output)
-ampOpNonInverting model r1 r2 input time= snd $ (circuit `simulate` input) `at` time
-    where circuit = ($ (ground, ground))
-                    <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time (vX, vOut) -> if (((openLoopGain model * vIn) - vOut) / openLoopGain model) - vX <= 0.001 && ((vX * (r1 + r2)) / r1) - vOut <= 0.01 then
-                        (vX, vOut) else
-                        f (((openLoopGain model * vIn) - vOut) / openLoopGain model, (vX * (r1 + r2)) / r1))
-
--- ampOpNonInverting :: Input -> Resistor -> Resistor -> AmpOp -> Output
--- ampOpNonInverting vIn r1 r2 model = mdo vX <- Circuit ((vOut * r1) / (r1 - r2))
---                                         vOut <- ampOp vIn (Circuit vX) model
---                                         return vOut                               
-
-ampOpInverting :: AmpOp -> Resistor -> Resistor -> (Input -> Time -> Output)
-ampOpInverting model r1 r2 input time = snd $ (circuit `simulate` input) `at` time
-    where circuit = ($ (ground, ground))
-                    <$> mfix (\f -> Circuit $ \vIn -> Signal $ \ time (vX, vOut) -> if vX - (- vOut) / openLoopGain model <= 0.001 && vOut - ((vX * (r1 + r2)) - vIn * r2) / r1 <= 0.01 then
-                        (vX, vOut) else
-                        f ((- vOut) / openLoopGain model, (vX * (r1 + r2) - vIn * r2) / r1))
-
-
--- ampOpInverting (Circuit vIn) model r1 r2 = Circuit vOut
---     where Circuit (_,_,vOut,_,_,_) = ($ (vIn, ground, ground, model, r1, r2)) 
---                 <$> mfix (\f -> Circuit $ \(vIn, vX, vOut, model, r1, r2) -> if (vX - (- vOut) / openLoopGain model <= 0.001) && (vOut - ((vX * (r1 + r2)) - vIn * r2) / r1 <= 0.01) then
---                                                                     (vIn, vX, vOut, model, r1, r2) else
---                                                                     f (vIn, (- vOut) / openLoopGain model, ((vX * (r1 + r2)) - vIn * r2) / r1, model, r1, r2))
-
-
-
-
-
-
--- func f = Circuit $ \vIn -> Signal $ \ time (vX, vOut) -> if (vX - (- vOut) / openLoopGain model <= 0.001) && (vOut - ((vX * (r1 + r2)) - vIn * r2) / r1 <= 0.01) then
---                                                       (vX, vOut) else
---                                                       f ((- vOut) / openLoopGain model, ((vX * (r1 + r2)) - vIn * r2) / r1)
+ampOpInverting :: AmpOp -> Resistor -> Resistor -> Circuit Input Output
+ampOpInverting model r1 r2 =
+    ($ (ground, ground)) <$> mfix
+    (\f -> Circuit $ \vIn -> Signal $ \t (vXOld, vOutOld) ->
+        let vX = (/ openLoopGain model) <$> (- vOutOld)
+            vOut = (/ r1) <$> (((* (r1 + r2)) <$> vXOld) - ((* r2) <$> vIn))
+        in if vOutOld - vOut <= eps && vXOld - vX <= eps
+            then vOut `at` t
+            else f (vX, vOut))            

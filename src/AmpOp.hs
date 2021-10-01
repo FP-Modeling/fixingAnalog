@@ -16,6 +16,9 @@ type OpenLoopGain = Double
 dc12 :: Signal Input
 dc12 = Signal $ const 12
 
+dc14 :: Signal Input
+dc14 = Signal $ const 14
+
 outlet :: Signal Input
 outlet = Signal $ \time -> 220 * sqrt 2 * (sin 2*pi*60*time)
 

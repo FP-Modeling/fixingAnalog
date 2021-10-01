@@ -5,6 +5,8 @@ import Control.Monad
 import Data.Functor
 import Signal
 
+infixr 5    @>
+
 newtype Circuit a b = Circuit {simulate :: Signal a -> Signal b}
 
 instance Functor (Circuit a) where
@@ -22,5 +24,5 @@ instance Monad (Circuit a) where
 instance MonadFix (Circuit a) where
      mfix f = Circuit $ \signal -> mfix ((`simulate` signal) . f)
 
--- instance Show a => Show (Circuit a) where
---     show (Circuit a)     = show a
+(@>) :: Circuit a b -> Circuit b c -> Circuit a c
+(@>) c1 c2 = Circuit $ \signal -> c2 `simulate` (c1 `simulate` signal)

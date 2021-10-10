@@ -2,10 +2,11 @@ module Circuit where
 
 import Control.Monad.Fix
 import Control.Monad
+import GHC.Base
+import Control.Category
+import Control.Arrow
 import Data.Functor
 import Signal
-
-infixr 5    @>
 
 newtype Circuit a b = Circuit {simulate :: Signal a -> Signal b}
 
@@ -19,10 +20,19 @@ instance Applicative (Circuit a) where
 
 instance Monad (Circuit a) where
     return = pure
-    (Circuit c) >>= f = Circuit $ \signal -> (`simulate` signal) . f =<< c signal
+    (Circuit c) >>= f = Circuit $ \signal -> (`simulate` signal) GHC.Base.. f =<< c signal
 
 instance MonadFix (Circuit a) where
-     mfix f = Circuit $ \signal -> mfix ((`simulate` signal) . f)
+     mfix f = Circuit $ \signal -> mfix ((`simulate` signal) GHC.Base.. f)
 
-(@>) :: Circuit a b -> Circuit b c -> Circuit a c
-(@>) c1 c2 = Circuit $ \signal -> c2 `simulate` (c1 `simulate` signal)
+instance Category Circuit where
+    id = Circuit GHC.Base.id
+    ca . cb = Circuit $ \signal -> ca `simulate` (cb `simulate` signal)
+
+instance Arrow Circuit where
+    arr f = Circuit $ fmap f
+    first (Circuit ca) = Circuit $ \signal -> Signal $ \time -> (ca (Signal $ \t -> fst (signal `at` time)) `at` time, snd (signal `at` time))
+
+instance ArrowLoop Circuit where
+    loop (Circuit f) = Circuit (fmap fst GHC.Base.. mfix GHC.Base.. f')
+        where f' x y = Signal $ \t -> (fst $ f (Signal $ \time -> (x `at` time, snd y `at` time)) `at` t, snd y)

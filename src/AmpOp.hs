@@ -75,3 +75,10 @@ ampOpInverting model r1 r2 =
         in if vOutOld - vOut <= eps && vXOld - vX <= eps
             then vOut `at` time
             else f (vX, vOut))            
+
+-- Calculating the output given a fixed input, to demonstrate the fix point only across the iteration axis
+ampOpInverting' :: AmpOp -> Input -> Resistor -> Resistor -> Output
+ampOpInverting' model input r1 r2 = fix calculate (0, 0)
+    where calculate f (vOutOld, vXOld) = if vOutOld - vOut <= 0.001 && vXOld - vX <= 0.001 then vOut else f (vOut, vX)
+            where vX = (- vOutOld) / openLoopGain model
+                  vOut = (vXOld * (r1 + r2) - (input * r2)) / r1

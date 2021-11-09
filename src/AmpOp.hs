@@ -34,7 +34,7 @@ instance Show AmpOp where
     show ap = Prelude.show "AmpOp => Name: " ++ Prelude.show (name ap)
 
 lm741 :: AmpOp
-lm741 = AmpOp "LM741" 200000 "Texas. Instruments"
+lm741 = AmpOp "LM741" 2000 "Texas. Instruments"
 
 r1 :: Resistor
 r1 = 10000

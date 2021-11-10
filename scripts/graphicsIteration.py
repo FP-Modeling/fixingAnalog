@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 xs = [0]
 ys = [0]
-with open("output.txt") as file:
+with open("outputIterations.txt") as file:
     for line in file:
         l = line.split(' ')
         xs.append(float(l[0]))

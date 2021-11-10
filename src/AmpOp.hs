@@ -19,6 +19,9 @@ dc12 = Signal $ const 12
 dc14 :: Signal Input
 dc14 = Signal $ const 14
 
+dc10000000 :: Signal Input
+dc10000000 = Signal $ const 10000000
+
 outlet :: Signal Input
 outlet = Signal $ \time -> 220 * sqrt 2 * (sin 2*pi*60*time)
 
@@ -42,7 +45,7 @@ r1 = 10000
 r2 :: Resistor
 r2 = 50000
 
-eps = 0.0001
+eps = 0.000001
 
 makeAmpOpModel :: String -> OpenLoopGain -> String -> AmpOp
 makeAmpOpModel = AmpOp

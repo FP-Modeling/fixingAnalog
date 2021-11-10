@@ -29,6 +29,7 @@ library
       Circuit
       Signal
       Simulation
+      Utils
   other-modules:
       Paths_ampOp
   hs-source-dirs:

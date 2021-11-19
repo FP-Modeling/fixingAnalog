@@ -1,4 +1,3 @@
-{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE BlockArguments #-}
 module AmpOp where
@@ -71,7 +70,6 @@ ampOpBuffer model (SignalState1 initial) =
         in if abs(vOut - vOutOld) <= eps
             then SignalState1 vOut
             else f vOut)
-
 
 ampOpNonInverting :: AmpOp -> Resistor -> Resistor -> SignalState -> Either String (Circuit Input SignalState)
 ampOpNonInverting _ _ _ (SignalState1 _ ) = Left "Wrong type for initial state!"            

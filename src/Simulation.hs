@@ -18,7 +18,4 @@ simulationSignal = executeSimulation iSignalState c1 sen [1..100]
 iState = State2 (100, 0)
 c2 = ampOpInverting' lm741 r1 r2 12
 
-simulation = executeSimulation' iState c2
-
-executeSimulation' :: State -> (State -> Either String Output) -> Either String Output
-executeSimulation' initialState buildCircuit = buildCircuit initialState >>= Right
+simulation = c2 iState

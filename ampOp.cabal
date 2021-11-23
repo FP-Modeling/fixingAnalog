@@ -27,6 +27,7 @@ library
   exposed-modules:
       AmpOp
       Circuit
+      Continuous
       Signal
       Simulation
       Utils

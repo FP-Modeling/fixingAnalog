@@ -91,7 +91,17 @@ ampOpInverting model r1 r2 (SignalState2 initial) =
             vOut = (/ r1) <$> (((* (r1 + r2)) <$> vXOld) - ((* r2) <$> vIn))
         in if abs(vOutOld - vOut) <= eps && abs(vXOld - vX) <= eps
             then SignalState2 (vX, vOut)
-            else f (vX, vOut))                     
+            else f (vX, vOut))              
+            
+ampOpInvertingTest :: AmpOp -> Resistor -> Resistor -> SignalState -> Circuit Input SignalState
+ampOpInvertingTest model r1 r2 (SignalState2 initial) =
+    ($ initial) <$> mfix
+    (\f -> Circuit $ \vIn -> Signal $ \time (vXOld, vOutOld) ->
+        let vX = (/ openLoopGain model) <$> (- vOutOld)
+            vOut = (/ r1) <$> (((* (r1 + r2)) <$> vXOld) - ((* r2) <$> vIn))
+        in if abs(vOutOld - vOut) <= eps && abs(vXOld - vX) <= eps
+            then SignalState2 (vX, vOut)
+            else f (vX, vOut))                    
 
 -- Calculating the output given a fixed input, to demonstrate the fix point only across the iteration axis
 ampOpInverting' :: AmpOp -> Resistor -> Resistor -> Input -> State -> Either String Output

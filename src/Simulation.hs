@@ -6,8 +6,6 @@ import Circuit
 import Signal
 import Control.Monad.Fix
 
-import Continuous
-
 executeSimulation :: SignalState -> (SignalState -> Either String (Circuit a SignalState)) -> Signal a -> [Time] -> Either String [(Time, Output)]
 executeSimulation _ _ _ [] = Right []
 executeSimulation initialState buildCircuit input (t:ts) = buildCircuit initialState >>= \circuit -> do let result = circuit `simulate` input `at` t
@@ -21,7 +19,7 @@ executeSimulation2 initialState buildCircuit input samples = fix calculate (init
             where newState = buildCircuit state `simulate` input `at` t
                   next = l ++ [result]
                   result = (t, getSignalOutput newState `at` t)
-                              
+
 iSignalState = SignalState2 (dc100, ground)
 c1 = ampOpInverting lm741 r1 r2
 c3 = ampOpInvertingTest lm741 r1 r2

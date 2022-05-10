@@ -1,9 +1,11 @@
 module Signal where
 
 import Control.Monad.Fix
+import Data.Complex
 
 type Time = Double
-newtype Signal a = Signal {at :: Time -> a}
+type Metric = Complex Double
+newtype Signal a = Signal {at :: Metric -> a}
 
 instance Functor Signal where
     fmap f (Signal a) = Signal $ \time -> f (a time)

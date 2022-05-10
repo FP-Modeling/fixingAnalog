@@ -27,8 +27,6 @@ library
   exposed-modules:
       AmpOp
       Circuit
-      Machine
-      Machine2
       Signal
       Simulation
       Utils
